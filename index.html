@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatGPT</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #212121;
+      color: #ececec;
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      font-weight: 300;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 260px;
+      background: #181818;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      flex-shrink: 0;
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.35s ease, border-color 0.35s ease;
+      overflow: hidden;
+      border-right: 1px solid transparent;
+      box-sizing: border-box;
+      will-change: width;
+      transform: translateZ(0);
+    }
+
+    .sidebar.collapsed {
+      width: 55px;
+      background: #212121;
+      border-right: 1px solid #2f2f2f;
+      padding: 8px 10px;
+      overflow: hidden;
+    }
+
+    .nav-label {
+      transition: opacity 0.2s ease, max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      max-width: 200px; opacity: 1; overflow: hidden; white-space: nowrap;
+    }
+    .sidebar.collapsed .nav-label {
+      max-width: 0; opacity: 0;
+    }
+
+    .sidebar-top {
+      display: flex;
+      align-items: center;
+      padding: 2px 2px 2px 0px;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 10;
+      height: 39px;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      border-radius: 8px; height: 35px; width: 35px;
+      justify-content: center;
+      transition: background 0.15s;
+      flex-shrink: 0;
+      transform: translateZ(0);
+    }
+    .logo:hover { background: #424242; }
+    .logo svg { width: 23px; height: 23px; }
+    .logo .logo-sidebar { width: 17px; height: 17px; }
+
+    .sidebar-icons {
+      display: flex; align-items: center; gap: 2px;
+      position: absolute; right: 2px;
+      opacity: 1; transition: opacity 0.2s ease;
+      transform: translateZ(0);
+    }
+
+    .icon-btn {
+      background: none; border: none; color: #ececec; cursor: pointer;
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; opacity: 0.8;
+      transition: background 0.15s, opacity 0.15s;
+      position: relative; height: 35px; width: 35px; padding: 0 6px;
+    }
+    .icon-btn:hover { background: #424242; opacity: 1; }
+    .icon-btn .tooltip {
+      display: none;
+      position: fixed; top: auto; left: auto;
+      background: #000; color: #fff; font-size: 12px; font-weight: 300;
+      padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+      pointer-events: none; z-index: 9999;
+    }
+
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 8px;
+      border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 300;
+      font-family: "SF Pro", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: #ececec; transition: background 0.15s; user-select: none;
+      transform: translateZ(0); height: 35px; box-sizing: border-box;
+    }
+    .nav-item:hover { background: #424242; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.85; }
+
+    .sidebar-history {
+      padding: 22px 0 8px;
+    }
+    .history-label {
+      font-size: 13px; color: #AFAFAF; padding: 6px 10px 8px;
+    }
+    .history-item {
+      font-size: 13px; color: #ececec; padding: 10px;
+      border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.15s; position: relative; will-change: transform;
+    }
+    .history-item:hover { background: #424242; }
+    .history-item-text {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+    }
+    .history-item-dots {
+      opacity: 0; flex-shrink: 0; margin-left: 6px;
+      display: flex; align-items: center; transition: opacity 0.15s;
+      color: #AFAFAF; will-change: opacity;
+    }
+    .history-item:hover .history-item-dots { opacity: 1; }
+
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; margin-top: 14px; }
+
+    .sidebar-bottom {
+      padding: 4px; display: flex; align-items: center;
+      justify-content: space-between; min-height: 40px;
+      border-radius: 10px; transition: background 0.15s; cursor: pointer;
+      position: relative;
+    }
+    .sidebar-bottom:hover { background: #424242; }
+    .sidebar.collapsed .sidebar-bottom { display: none; }
+
+    .user-info {
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      padding: 6px 4px 6px 1px; border-radius: 10px; transition: background 0.15s;
+      flex: 1; position: relative; height: 38px;
+    }
+    .user-info:hover { background: transparent; }
+
+    .upgrade-btn {
+      background: none; border: 1px solid #555; color: #ececec;
+      font-size: 12px; padding: 5px 12px; border-radius: 20px; cursor: pointer;
+      white-space: nowrap; transition: background 0.15s, opacity 0.15s ease;
+      opacity: 1; position: absolute; right: 4px;
+    }
+    .upgrade-btn:hover { background: #3a3a3a; border-color: #3a3a3a; }
+
+    .collapsed-bottom {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0;
+    }
+    .sidebar.collapsed .collapsed-bottom { display: flex; }
+
+    .avatar {
+      width: 26px; height: 26px; border-radius: 50%; background: #FB80C2;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 400; color: #fff; flex-shrink: 0;
+    }
+
+    .user-text {
+      display: flex; flex-direction: column;
+      opacity: 1; transition: opacity 0.15s ease; white-space: nowrap;
+    }
+    .user-name { font-size: 12px; font-weight: 300; color: #ececec; }
+    .user-plan { font-size: 10px; color: #8e8ea0; }
+
+    /* MAIN */
+    .main {
+      flex: 1; display: flex; flex-direction: column;
+      background: #212121; position: relative; overflow: hidden;
+    }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 8px; position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      background: #212121;
+    }
+
+    .topbar-center { position: absolute; left: 50%; transform: translateX(-50%); }
+
+    .model-selector {
+      display: flex; align-items: center; gap: 6px; font-size: 18px;
+      font-weight: 400; color: #ececec; cursor: pointer; padding: 6px 10px;
+      border-radius: 8px; transition: background 0.15s; user-select: none;
+    }
+    .model-selector:hover { background: #424242; }
+    .model-selector svg { width: 16px; height: 16px; opacity: 0.7; }
+
+    .topbar-right { display: flex; align-items: center; gap: 8px; overflow: visible; position: relative; }
+
+    .plus-btn {
+      background: #37366D; color: #DCDBF8; border: none; padding: 9px 11px;
+      border-radius: 20px; font-size: 13px; font-weight: 300; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; transition: background 0.15s;
+    }
+    .plus-btn:hover { background: #414075; }
+
+    .topbar-icon {
+      background: none; border: none; color: #ececec; cursor: pointer;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      width: 35px; height: 35px; opacity: 1;
+      transition: background 0.15s, opacity 0.15s;
+      position: relative; overflow: visible;
+    }
+    .topbar-icon:hover { background: #424242; opacity: 1; }
+    .topbar-icon.round { border-radius: 50%; }
+
+    .topbar-icon .tooltip {
+      display: none;
+      position: absolute; top: calc(100% + 8px); right: 0; left: auto; transform: none;
+      background: #000; color: #fff; font-size: 12px; font-weight: 300;
+      padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+      pointer-events: none; z-index: 9999;
+    }
+    .topbar-icon:hover .tooltip { display: block; }
+
+    .share-topbar-btn {
+      background: none; border: none; color: #ececec; cursor: pointer; padding: 0px 12px;
+      border-radius: 8px; display: flex; align-items: center; gap: 6px; font-size: 13px;
+      height: 35px; opacity: 1; transition: background 0.15s;
+      will-change: transform;
+    }
+    .share-topbar-btn:hover { background: #424242; opacity: 1; }
+    .share-topbar-btn svg { flex-shrink: 0; }
+
+    /* ── COLLAPSED SIDEBAR – complete rewrite ── */
+    .sidebar.collapsed {
+      width: 52px;
+      background: #212121;
+      border-right: 1px solid #2f2f2f;
+      padding: 8px 8px 8px 9px;
+      overflow: hidden;
+    }
+
+    /* hide toggle icons row */
+    .sidebar.collapsed .sidebar-icons { opacity: 0; pointer-events: none; }
+
+    /* hide nav labels */
+    .sidebar.collapsed .nav-label { max-width: 0; opacity: 0; }
+
+    /* hide Apps + Projekte (items 4 & 5) */
+    .sidebar.collapsed .nav-item:nth-child(n+4) { display: none; }
+
+    /* hide chat history */
+    .sidebar.collapsed .sidebar-history { display: none !important; }
+
+    .collapsed-bottom {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 0;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .sidebar.collapsed .collapsed-bottom { display: flex; opacity: 1; }
+
+    .collapsed-btn {
+      width: 35px; height: 35px;
+      background: none; border: none; cursor: pointer;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; color: #ececec;
+      transition: background 0.15s;
+    }
+    .collapsed-btn:hover { background: #424242; }
+    #collapsed-star-btn svg { margin-top: 3px; margin-left: -1px; }
+
+    .collapsed-star-wrap { display: none; }
+    .collapsed-star-btn { display: none; }
+    #home-view {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 0px 20px 120px;
+    }
+
+    .main-heading {
+      font-size: 28px; font-weight: 300; color: #ececec;
+      margin-bottom: 28px; letter-spacing: -0.3px;
+    }
+
+    .input-area {
+      width: 100%; max-width: 800px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    .suggestion {
+      margin-top: 16px; font-size: 15px; color: #ececec; cursor: pointer;
+      opacity: 0; transform: translateY(6px); font-weight: 300;
+      transition: opacity 0.25s ease, transform 0.25s ease, color 0.15s;
+      pointer-events: none; text-align: center;
+      padding: 0 28px;
+    }
+    .suggestion.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .suggestion:hover { color: #aaaaaa; }
+
+    /* CHAT VIEW */
+    #chat-view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    #chat-view.active { display: flex; }
+
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 72px 0 20px;
+      display: flex; flex-direction: column; align-items: center;
+      scrollbar-width: thin; scrollbar-color: #3a3a3a transparent;
+    }
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
+
+    .message-row { width: 100%; max-width: 800px; padding: 20px 0; }
+
+    .user-bubble { display: flex; justify-content: flex-end; margin-bottom: 4px; position: relative; }
+    .user-bubble:hover .bubble-actions { opacity: 1; }
+
+    .bubble-actions {
+      position: absolute; bottom: -30px; right: 4px;
+      display: flex; gap: 2px; opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .bubble-action-btn {
+      background: none; border: none; color: #8e8ea0; cursor: pointer;
+      width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, background 0.15s;
+      border-radius: 7px; position: relative; flex-shrink: 0;
+    }
+    .bubble-action-btn:hover { color: #ececec; background: #424242; }
+    .bubble-action-btn .action-tooltip {
+      position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: #000; color: #fff; font-size: 12px; font-weight: 300;
+      padding: 6px 10px; border-radius: 8px; white-space: nowrap;
+      pointer-events: none; z-index: 9999;
+      opacity: 0; visibility: hidden; transition: opacity 0.1s, visibility 0.1s;
+    }
+    .bubble-action-btn:hover .action-tooltip { opacity: 1; visibility: visible; }
+    .user-bubble-inner {
+      background: #2f2f2f; color: #ececec; padding: 10px 16px;
+      border-radius: 22px; font-size: 15px; max-width: 65%; line-height: 1.4;
+    }
+
+    .assistant-msg { color: #ececec; font-size: 15px; font-weight: 300; line-height: 1.7; padding: 8px 0 4px; }
+    .assistant-msg p { margin-bottom: 10px; }
+    .assistant-msg p:last-child { margin-bottom: 0; }
+    .assistant-msg strong { font-weight: 600; }
+
+    .action-bar {
+      display: flex; align-items: center; gap: 2px;
+      padding: 8px 0 6px;
+    }
+
+    .action-btn {
+      background: none; border: none; color: #8e8ea0; cursor: pointer;
+      padding: 6px; border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; min-width: 29px; min-height: 29px;
+      transition: color 0.15s, background 0.15s;
+      opacity: 0; position: relative;
+    }
+    .action-btn:hover { color: #ececec; background: #424242; }
+    .action-btn.visible { animation: fadeInBtn 0.25s ease forwards; }
+
+    .action-btn .action-tooltip {
+      position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: #000; color: #fff; font-size: 12px; font-weight: 300;
+      padding: 6px 10px; border-radius: 8px; white-space: nowrap;
+      pointer-events: none; z-index: 9999;
+      opacity: 0; visibility: hidden; transition: opacity 0.1s, visibility 0.1s;
+      text-align: center; line-height: 1.4;
+    }
+    .action-btn:hover .action-tooltip { opacity: 1; visibility: visible; }
+
+    @keyframes fadeInBtn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .chat-followup {
+      width: 100%; max-width: 800px; text-align: center;
+      font-size: 15px; color: #ececec; cursor: pointer; font-weight: 300;
+      padding: 0 28px 10px; opacity: 0; transform: translateY(4px);
+      transition: opacity 0.25s ease, transform 0.25s ease, color 0.15s;
+      pointer-events: none; user-select: none;
+    }
+    .chat-followup.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .chat-followup:hover { color: #aaaaaa; }
+
+    .chat-footer-note { text-align: center; font-size: 12px; color: #ffffff; padding: 6px 0; }
+    .chat-footer-note a { color: #ffffff; text-decoration: underline; }
+
+    /* SHARED INPUT */
+    .input-wrapper {
+      width: 100%; background: #303030; border-radius: 28px;
+      display: flex; align-items: center; padding: 6px 8px 6px 16px;
+      gap: 8px; border: 1px solid #303030;
+      box-shadow: 0 5px 5px rgba(0, 0, 0, 0.10);
+      overflow: visible;
+    }
+
+    .attach-btn {
+      background: none; border: none; color: #FFFFFF; cursor: pointer;
+      display: flex; align-items: center; padding: 4px; border-radius: 50%;
+      width: 34px; height: 34px; justify-content: center;
+      transition: background 0.15s; flex-shrink: 0; position: relative;
+      margin-left: -8px;
+    }
+    .attach-btn:hover { background: #424242; }
+    .attach-btn .tooltip, .mic-btn .tooltip {
+      display: none;
+      position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: #000; color: #fff; font-size: 12px; font-weight: 300;
+      padding: 5px 6px 5px 10px; border-radius: 8px; white-space: nowrap;
+      pointer-events: none; z-index: 9999;
+    }
+    .attach-btn:hover .tooltip, .mic-btn:hover .tooltip { display: block; }
+
+    .chat-input {
+      flex: 1; background: none; border: none; outline: none; color: #FFFFFF;
+      font-size: 15px; font-family: inherit; font-weight: 300; padding: 10px 0; resize: none;
+      line-height: 1.5; max-height: 200px; overflow-y: auto;
+    }
+    .chat-input::placeholder { color: #AFAFAF; font-weight: 300; }
+
+    .input-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; overflow: visible; }
+
+    .mic-btn {
+      background: none; border: none; color: #FFFFFF; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%; transition: background 0.15s;
+      position: relative; flex-shrink: 0;
+    }
+    .mic-btn:hover { background: #424242; }
+
+    .sound-btn {
+      width: 34px; height: 34px; background: transparent; border: none;
+      border-radius: 50%; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+      position: relative; overflow: visible;
+    }
+    .sound-btn.typing { background: transparent; cursor: default; }
+    .sound-btn.ready { background: transparent; cursor: pointer; }
+    .sound-btn svg { color: #212121; display: block; }
+    .sound-btn.voice.hovered svg { filter: brightness(0.75); }
+    .sound-btn.voice:focus:not(.hovered) svg { filter: none; }
+    .sound-btn .tooltip {
+      position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: #000; color: #ffffff; font-size: 12px; font-weight: 300;
+      padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+      pointer-events: none; z-index: 9999;
+      opacity: 0; visibility: hidden; transition: opacity 0.1s, visibility 0.1s;
+    }
+    .sound-btn.voice.hovered .tooltip { opacity: 1; visibility: visible; }
+
+    .chat-input-bar {
+      padding: 12px 20px 10px; display: flex;
+      flex-direction: column; align-items: center; gap: 8px;
+    }
+    .chat-input-bar .input-wrapper { max-width: 800px; }
+
+    /* Blinking cursor */
+    .typing-cursor {
+      display: inline-block; width: 2px; height: 1em;
+      background: #ececec; margin-left: 2px; vertical-align: text-bottom;
+      animation: blink 0.75s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── END RESEARCH BUTTON ── */
+    .end-research-row {
+      width: 100%; max-width: 800px;
+      display: flex; justify-content: center;
+      padding: 18px 0 4px;
+      animation: fadeInEndBtn 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+    .end-research-btn {
+      background: #ffffff; color: #212121; border: none;
+      padding: 10px 22px; border-radius: 20px;
+      font-size: 14px; font-weight: 400;
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .end-research-btn:hover { background: #e8e8e8; }
+    .end-research-btn:active { transform: scale(0.97); }
+    @keyframes fadeInEndBtn {
+      0%   { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── MODAL OVERLAY ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 1000;
+      background: transparent;
+      backdrop-filter: blur(0px);
+      -webkit-backdrop-filter: blur(0px);
+      transition: backdrop-filter 0.25s ease;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      background: rgba(0,0,0,0.35);
+    }
+
+    .modal-box {
+      background: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      border-radius: 18px;
+      padding: 28px 28px 24px;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 16px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    .modal-overlay.active .modal-box {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: #ececec;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .modal-body {
+      font-size: 14px;
+      font-weight: 300;
+      color: #AFAFAF;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-btn {
+      padding: 9px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 400;
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .modal-btn:active { transform: scale(0.97); }
+
+    .modal-btn-cancel {
+      background: transparent;
+      color: #ececec;
+      border: 1px solid #555;
+    }
+    .modal-btn-cancel:hover { background: #3a3a3a; border-color: #666; }
+
+    .modal-btn-confirm {
+      background: #ffffff;
+      color: #212121;
+    }
+    .modal-btn-confirm:hover { background: #e8e8e8; }
+
+    /* ── MODAL CONFIRMED STATE ── */
+    .modal-confirmed {
+      display: none;
+    }
+    .modal-confirmed.active {
+      display: block;
+    }
+    .modal-prompt {
+      display: block;
+    }
+    .modal-prompt.hidden {
+      display: none;
+    }
+
+    .modal-confirmed-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: #ececec;
+      margin-bottom: 10px;
+    }
+
+    .modal-confirmed-body {
+      font-size: 14px;
+      font-weight: 300;
+      color: #AFAFAF;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-top">
+    <div class="logo">
+      <svg class="logo-chatgpt" width="23" height="23" viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M37.532 16.87a9.963 9.963 0 0 0-.856-8.184 10.078 10.078 0 0 0-10.855-4.835 9.964 9.964 0 0 0-6.75-3.012 10.079 10.079 0 0 0-9.617 6.977 9.967 9.967 0 0 0-6.63 4.834 10.08 10.08 0 0 0 1.24 11.817 9.965 9.965 0 0 0 .856 8.185 10.079 10.079 0 0 0 10.855 4.835 9.965 9.965 0 0 0 6.75 3.012 10.078 10.078 0 0 0 9.617-6.976 9.967 9.967 0 0 0 6.63-4.835 10.079 10.079 0 0 0-1.24-11.816zM22.498 37.886a7.474 7.474 0 0 1-4.799-1.735c.061-.033.168-.091.237-.134l7.964-4.6a1.294 1.294 0 0 0 .655-1.134V19.054l3.366 1.944a.12.12 0 0 1 .066.092v9.299a7.505 7.505 0 0 1-7.49 7.496zM6.392 31.006a7.471 7.471 0 0 1-.894-5.023c.06.036.162.099.237.141l7.964 4.6a1.297 1.297 0 0 0 1.308 0l9.724-5.614v3.888a.12.12 0 0 1-.048.103l-8.051 4.649a7.504 7.504 0 0 1-10.24-2.744zM4.297 13.62A7.469 7.469 0 0 1 8.2 10.333c0 .068-.004.19-.004.274v9.201a1.294 1.294 0 0 0 .654 1.132l9.723 5.614-3.366 1.944a.12.12 0 0 1-.114.012L7.044 23.86a7.504 7.504 0 0 1-2.747-10.24zm27.658 6.437l-9.724-5.615 3.367-1.943a.121.121 0 0 1 .114-.012l8.048 4.648a7.498 7.498 0 0 1-1.158 13.528v-9.476a1.293 1.293 0 0 0-.647-1.13zm3.35-5.043c-.059-.037-.162-.099-.236-.141l-7.965-4.6a1.298 1.298 0 0 0-1.308 0l-9.723 5.614v-3.888a.12.12 0 0 1 .048-.103l8.05-4.645a7.497 7.497 0 0 1 11.135 7.763zm-21.063 6.929l-3.367-1.944a.12.12 0 0 1-.065-.092v-9.299a7.497 7.497 0 0 1 12.293-5.756 6.94 6.94 0 0 0-.236.134l-7.965 4.6a1.294 1.294 0 0 0-.654 1.132l-.006 11.225zm1.829-3.943l4.33-2.501 4.332 2.5v4.999l-4.331 2.5-4.331-2.5V18z" fill="currentColor"/>
+      </svg>
+      <svg class="logo-sidebar" width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M6.07143 2.125H13.3571C13.8402 2.125 14.3035 2.34888 14.6451 2.7474C14.9867 3.14591 15.1786 3.68641 15.1786 4.25V12.75C15.1786 13.3136 14.9867 13.8541 14.6451 14.2526C14.3035 14.6511 13.8402 14.875 13.3571 14.875H6.07143V2.125ZM4.25 2.125H3.64286C3.15978 2.125 2.6965 2.34888 2.35491 2.7474C2.01333 3.14591 1.82143 3.68641 1.82143 4.25V12.75C1.82143 13.3136 2.01333 13.8541 2.35491 14.2526C2.6965 14.6511 3.15978 14.875 3.64286 14.875H4.25V2.125ZM0 4.25C0 3.12283 0.3838 2.04183 1.06697 1.2448C1.75014 0.447767 2.67671 0 3.64286 0H13.3571C14.3233 0 15.2499 0.447767 15.933 1.2448C16.6162 2.04183 17 3.12283 17 4.25V12.75C17 13.8772 16.6162 14.9582 15.933 15.7552C15.2499 16.5522 14.3233 17 13.3571 17H3.64286C2.67671 17 1.75014 16.5522 1.06697 15.7552C0.3838 14.9582 0 13.8772 0 12.75V4.25Z" fill="#AFAFAF"/>
+      </svg>
+    </div>
+    <div class="sidebar-icons">
+      <button class="icon-btn" id="sidebar-toggle-btn" data-tooltip="Seitenleiste schließen">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M6.07143 2.125H13.3571C13.8402 2.125 14.3035 2.34888 14.6451 2.7474C14.9867 3.14591 15.1786 3.68641 15.1786 4.25V12.75C15.1786 13.3136 14.9867 13.8541 14.6451 14.2526C14.3035 14.6511 13.8402 14.875 13.3571 14.875H6.07143V2.125ZM4.25 2.125H3.64286C3.15978 2.125 2.6965 2.34888 2.35491 2.7474C2.01333 3.14591 1.82143 3.68641 1.82143 4.25V12.75C1.82143 13.3136 2.01333 13.8541 2.35491 14.2526C2.6965 14.6511 3.15978 14.875 3.64286 14.875H4.25V2.125ZM0 4.25C0 3.12283 0.3838 2.04183 1.06697 1.2448C1.75014 0.447767 2.67671 0 3.64286 0H13.3571C14.3233 0 15.2499 0.447767 15.933 1.2448C16.6162 2.04183 17 3.12283 17 4.25V12.75C17 13.8772 16.6162 14.9582 15.933 15.7552C15.2499 16.5522 14.3233 17 13.3571 17H3.64286C2.67671 17 1.75014 16.5522 1.06697 15.7552C0.3838 14.9582 0 13.8772 0 12.75V4.25Z" fill="#AFAFAF"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <!-- "Neuer Chat" – no onclick, no function -->
+    <div class="nav-item" id="new-chat-btn" data-tooltip="Neuer Chat">
+      <svg width="16" height="15" viewBox="0 0 16 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M10.1619 8.28963L8.50814 9.28713L7.73339 8.00238L9.38714 7.00488L9.38939 7.00338C9.45278 6.96521 9.51123 6.91936 9.56339 6.86688L13.3209 3.08988C13.3585 3.05194 13.3948 3.01266 13.4296 2.97213C13.6779 2.68263 14.0454 2.10963 13.6006 1.66263C13.2249 1.28463 12.6864 1.64163 12.3376 1.94838C12.2441 2.03085 12.154 2.11718 12.0676 2.20713L12.0421 2.23263L8.33714 5.95638C8.24917 6.04383 8.18023 6.14852 8.13464 6.26388L7.51664 7.81863C7.50492 7.84789 7.50272 7.88009 7.51033 7.91067C7.51795 7.94125 7.53501 7.96866 7.55908 7.989C7.58316 8.00934 7.61303 8.02158 7.64445 8.02398C7.67587 8.02638 7.70651 8.01883 7.73339 8.00238L8.50814 9.28713C7.15439 10.1031 5.53814 8.73213 6.12314 7.26363L6.74189 5.70963C6.86236 5.40596 7.04356 5.13007 7.27439 4.89888L10.9786 1.17438L11.0004 1.15263C11.1106 1.04013 11.4811 0.660632 11.9304 0.387632C12.1756 0.239882 12.5671 0.0441318 13.0509 0.00663177C13.6059 -0.0376182 14.1984 0.137132 14.6634 0.604382C15.0193 0.955974 15.2431 1.41952 15.2971 1.91688C15.3343 2.30455 15.275 2.6954 15.1246 3.05463C14.9071 3.59238 14.5441 3.98763 14.3844 4.14738L10.6269 7.92438C10.4869 8.06488 10.3319 8.18663 10.1619 8.28963ZM13.5016 2.94513C13.5016 2.94513 13.4986 2.94738 13.4919 2.94963L13.5016 2.94513Z" fill="white"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M0 3.64275C0 2.67663 0.383789 1.75008 1.06694 1.06694C1.75008 0.383789 2.67663 0 3.64275 0H7.5C7.69891 0 7.88968 0.0790176 8.03033 0.21967C8.17098 0.360322 8.25 0.551088 8.25 0.75C8.25 0.948912 8.17098 1.13968 8.03033 1.28033C7.88968 1.42098 7.69891 1.5 7.5 1.5H3.64275C3.07446 1.5 2.52944 1.72575 2.1276 2.1276C1.72575 2.52944 1.5 3.07446 1.5 3.64275V11.3573C1.5 11.9255 1.72575 12.4706 2.1276 12.8724C2.52944 13.2742 3.07446 13.5 3.64275 13.5H11.3573C11.9255 13.5 12.4706 13.2742 12.8724 12.8724C13.2742 12.4706 13.5 11.9255 13.5 11.3573V7.5C13.5 7.30109 13.579 7.11032 13.7197 6.96967C13.8603 6.82902 14.0511 6.75 14.25 6.75C14.4489 6.75 14.6397 6.82902 14.7803 6.96967C14.921 7.11032 15 7.30109 15 7.5V11.3573C15 12.3234 14.6162 13.2499 13.9331 13.9331C13.2499 14.6162 12.3234 15 11.3573 15H3.64275C2.67663 15 1.75008 14.6162 1.06694 13.9331C0.383789 13.2499 0 12.3234 0 11.3573V3.64275Z" fill="white"/>
+      </svg>
+      <span class="nav-label">Neuer Chat</span>
+    </div>
+    <div class="nav-item" data-tooltip="Chats suchen">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15.7753 14.6511L12.8091 11.7067C13.9605 10.2699 14.5181 8.44635 14.3672 6.61085C14.2164 4.77535 13.3685 3.06745 11.998 1.83834C10.6275 0.609226 8.83851 -0.0476794 6.9989 0.00269722C5.15928 0.0530739 3.40887 0.806903 2.10758 2.10918C0.806291 3.41146 0.0530336 5.1632 0.00269517 7.00421C-0.0476432 8.84523 0.608763 10.6356 1.83694 12.0071C3.06512 13.3787 4.77172 14.2272 6.60583 14.3781C8.43994 14.5291 10.2621 13.9711 11.6978 12.8188L14.64 15.7633C14.7143 15.8383 14.8028 15.8978 14.9002 15.9385C14.9976 15.9791 15.1021 16 15.2077 16C15.3132 16 15.4177 15.9791 15.5152 15.9385C15.6126 15.8978 15.701 15.8383 15.7753 15.7633C15.9194 15.6141 16 15.4147 16 15.2072C16 14.9997 15.9194 14.8003 15.7753 14.6511ZM7.21243 12.8188C6.10552 12.8188 5.02346 12.4903 4.10309 11.8749C3.18272 11.2595 2.46538 10.3847 2.04178 9.36129C1.61818 8.33786 1.50735 7.2117 1.7233 6.12523C1.93925 5.03875 2.47228 4.04076 3.25499 3.25746C4.0377 2.47416 5.03493 1.94072 6.12058 1.72461C7.20622 1.50849 8.33153 1.61941 9.35419 2.04333C10.3768 2.46725 11.2509 3.18514 11.8659 4.1062C12.4809 5.02727 12.8091 6.11015 12.8091 7.21791C12.8091 8.70337 12.2195 10.128 11.1699 11.1784C10.1203 12.2287 8.69676 12.8188 7.21243 12.8188Z" fill="white"/>
+      </svg>
+      <span class="nav-label">Chats suchen</span>
+    </div>
+    <div class="nav-item" data-tooltip="Bilder">
+      <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M1 15.0625V6.625C1 6.37636 1.0878 6.1379 1.24408 5.96209C1.40036 5.78627 1.61232 5.6875 1.83333 5.6875H11C11.221 5.6875 11.433 5.78627 11.5893 5.96209C11.7455 6.1379 11.8333 6.37636 11.8333 6.625V15.0625C11.8333 15.3111 11.7455 15.5496 11.5893 15.7254C11.433 15.9012 11.221 16 11 16H1.83333C1.61232 16 1.40036 15.9012 1.24408 15.7254C1.0878 15.5496 1 15.3111 1 15.0625ZM1 15.0625L4.5775 11.0378C4.73377 10.8621 4.9457 10.7633 5.16667 10.7633C5.38764 10.7633 5.59956 10.8621 5.75583 11.0378L10.1667 16M4.33333 2.875V1.9375C4.33333 1.68886 4.42113 1.4504 4.57741 1.27459C4.73369 1.09877 4.94565 1 5.16667 1H15.1667C15.3877 1 15.5996 1.09877 15.7559 1.27459C15.9122 1.4504 16 1.68886 16 1.9375V11.3125C16 11.5611 15.9122 11.7996 15.7559 11.9754C15.5996 12.1512 15.3877 12.25 15.1667 12.25H14.3333M8.5 8.5V8.50938" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="nav-label">Bilder</span>
+    </div>
+    <div class="nav-item" data-tooltip="Apps">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6.41667 3.58333C6.41667 2.83189 6.11816 2.11122 5.5868 1.57986C5.05545 1.04851 4.33478 0.75 3.58333 0.75C2.83189 0.75 2.11122 1.04851 1.57986 1.57986C1.04851 2.11122 0.75 2.83189 0.75 3.58333C0.75 4.33478 1.04851 5.05545 1.57986 5.5868C2.11122 6.11816 2.83189 6.41667 3.58333 6.41667C4.33478 6.41667 5.05545 6.11816 5.5868 5.5868C6.11816 5.05545 6.41667 4.33478 6.41667 3.58333ZM6.41667 12.0833C6.41667 11.3319 6.11816 10.6112 5.5868 10.0799C5.05545 9.54851 4.33478 9.25 3.58333 9.25C2.83189 9.25 2.11122 9.54851 1.57986 10.0799C1.04851 10.6112 0.75 11.3319 0.75 12.0833C0.75 12.8348 1.04851 13.5554 1.57986 14.0868C2.11122 14.6182 2.83189 14.9167 3.58333 14.9167C4.33478 14.9167 5.05545 14.6182 5.5868 14.0868C6.11816 13.5554 6.41667 12.8348 6.41667 12.0833ZM14.9167 3.58333C14.9167 2.83189 14.6182 2.11122 14.0868 1.57986C13.5554 1.04851 12.8348 0.75 12.0833 0.75C11.3319 0.75 10.6112 1.04851 10.0799 1.57986C9.54851 2.11122 9.25 2.83189 9.25 3.58333C9.25 4.33478 9.54851 5.05545 10.0799 5.5868C10.6112 6.11816 11.3319 6.41667 12.0833 6.41667C12.8348 6.41667 13.5554 6.11816 14.0868 5.5868C14.6182 5.05545 14.9167 4.33478 14.9167 3.58333ZM14.9167 12.0833C14.9167 11.3319 14.6182 10.6112 14.0868 10.0799C13.5554 9.54851 12.8348 9.25 12.0833 9.25C11.3319 9.25 10.6112 9.54851 10.0799 10.0799C9.54851 10.6112 9.25 11.3319 9.25 12.0833C9.25 12.8348 9.54851 13.5554 10.0799 14.0868C10.6112 14.6182 11.3319 14.9167 12.0833 14.9167C12.8348 14.9167 13.5554 14.6182 14.0868 14.0868C14.6182 13.5554 14.9167 12.8348 14.9167 12.0833Z" stroke="white" stroke-width="1.5"/>
+      </svg>
+      <span class="nav-label">Apps</span>
+    </div>
+    <div class="nav-item" data-tooltip="Projekte">
+      <svg width="17" height="15" viewBox="0 0 17 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M1.59375 1.59375V3.1875H7.64681L6.58431 1.59375H1.59375ZM0 1.0625V12.4844C0 13.2175 0.595 13.8125 1.32812 13.8125H7.70312C7.91447 13.8125 8.11716 13.7285 8.2666 13.5791C8.41604 13.4297 8.5 13.227 8.5 13.0156C8.5 12.8043 8.41604 12.6016 8.2666 12.4521C8.11716 12.3027 7.91447 12.2188 7.70312 12.2188H1.59375V4.78125H15.4062V6.64062C15.4062 6.85197 15.4902 7.05466 15.6396 7.2041C15.7891 7.35354 15.9918 7.4375 16.2031 7.4375C16.4145 7.4375 16.6172 7.35354 16.7666 7.2041C16.916 7.05466 17 6.85197 17 6.64062V4.51562C17 3.7825 16.405 3.1875 15.6719 3.1875H9.56038L9.52425 3.12906L7.75306 0.472813C7.656 0.327339 7.52454 0.208072 7.37033 0.125593C7.21612 0.043114 7.04394 -2.6158e-05 6.86906 1.18994e-08H1.0625C0.780707 1.18994e-08 0.510456 0.111942 0.311199 0.311199C0.111942 0.510456 0 0.780707 0 1.0625ZM13.8125 14.875C13.6012 14.875 13.3985 14.791 13.249 14.6416C13.0996 14.4922 13.0156 14.2895 13.0156 14.0781V12.4844H11.4219C11.2105 12.4844 11.0078 12.4004 10.8584 12.251C10.709 12.1015 10.625 11.8988 10.625 11.6875C10.625 11.4762 10.709 11.2735 10.8584 11.124C11.0078 10.9746 11.2105 10.8906 11.4219 10.8906H13.0156V9.29688C13.0156 9.08553 13.0996 8.88284 13.249 8.7334C13.3985 8.58396 13.6012 8.5 13.8125 8.5C14.0238 8.5 14.2265 8.58396 14.376 8.7334C14.5254 8.88284 14.6094 9.08553 14.6094 9.29688V10.8906H16.2031C16.4145 10.8906 16.6172 10.9746 16.7666 11.124C16.916 11.2735 17 11.4762 17 11.6875C17 11.8988 16.916 12.1015 16.7666 12.251C16.6172 12.4004 16.4145 12.4844 16.2031 12.4844H14.6094V14.0781C14.6094 14.2895 14.5254 14.4922 14.376 14.6416C14.2265 14.791 14.0238 14.875 13.8125 14.875Z" fill="white"/>
+      </svg>
+      <span class="nav-label">Projekte</span>
+    </div>
+
+    <div class="sidebar-history" id="sidebar-history" style="display:none;">
+      <div class="history-label">Deine Chats</div>
+      <div class="history-item" id="history-item-title">
+        <span class="history-item-text" id="history-item-text"></span>
+        <span class="history-item-dots">
+          <svg width="14" height="4" viewBox="0 0 20 5" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1.00049 2.16667C1.00049 2.47609 1.11572 2.77283 1.32084 2.99162C1.52596 3.21042 1.80416 3.33333 2.09424 3.33333C2.38432 3.33333 2.66252 3.21042 2.86764 2.99162C3.07275 2.77283 3.18799 2.47609 3.18799 2.16667C3.18799 1.85725 3.07275 1.5605 2.86764 1.34171C2.66252 1.12292 2.38432 1 2.09424 1C1.80416 1 1.52596 1.12292 1.32084 1.34171C1.11572 1.5605 1.00049 1.85725 1.00049 2.16667ZM8.65674 2.16667C8.65674 2.47609 8.77197 2.77283 8.97709 2.99162C9.18221 3.21042 9.46041 3.33333 9.75049 3.33333C10.0406 3.33333 10.3188 3.21042 10.5239 2.99162C10.729 2.77283 10.8442 2.47609 10.8442 2.16667C10.8442 1.85725 10.729 1.5605 10.5239 1.34171C10.3188 1.12292 10.0406 1 9.75049 1C9.46041 1 9.18221 1.12292 8.97709 1.34171C8.77197 1.5605 8.65674 1.85725 8.65674 2.16667ZM16.313 2.16667C16.313 2.47609 16.4282 2.77283 16.6333 2.99162C16.8385 3.21042 17.1167 3.33333 17.4067 3.33333C17.6968 3.33333 17.975 3.21042 18.1801 2.99162C18.3853 2.77283 18.5005 2.47609 18.5005 2.16667C18.5005 1.85725 18.3853 1.5605 18.1801 1.34171C17.975 1.12292 17.6968 1 17.4067 1C17.1167 1 16.8385 1.12292 16.6333 1.34171C16.4282 1.5605 16.313 1.85725 16.313 2.16667Z" fill="#AFAFAF" stroke="#AFAFAF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="collapsed-bottom">
+    <button class="collapsed-btn collapsed-avatar-btn" data-tooltip="Guest User">
+      <div class="avatar">GU</div>
+    </button>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="user-info">
+      <div class="avatar">GU</div>
+      <div class="user-text">
+        <span class="user-name">Guest User</span>
+        <span class="user-plan">Plus</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="model-selector">
+      ChatGPT
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </div>
+    <div class="topbar-center"></div>
+    <div class="topbar-right">
+      <button class="share-topbar-btn" id="share-btn" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7.75 1V10M7.75 1L11.5 4.75M7.75 1L4 4.75M14.5 10V13C14.5 13.3978 14.342 13.7794 14.0607 14.0607C13.7794 14.342 13.3978 14.5 13 14.5H2.5C2.10218 14.5 1.72064 14.342 1.43934 14.0607C1.15804 13.7794 1 13.3978 1 13V10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Gemeinsam nutzen
+      </button>
+      <button class="topbar-icon" id="more-btn" style="display:none;">
+        <svg width="20" height="5" viewBox="0 0 20 5" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1.00049 2.16667C1.00049 2.47609 1.11572 2.77283 1.32084 2.99162C1.52596 3.21042 1.80416 3.33333 2.09424 3.33333C2.38432 3.33333 2.66252 3.21042 2.86764 2.99162C3.07275 2.77283 3.18799 2.47609 3.18799 2.16667C3.18799 1.85725 3.07275 1.5605 2.86764 1.34171C2.66252 1.12292 2.38432 1 2.09424 1C1.80416 1 1.52596 1.12292 1.32084 1.34171C1.11572 1.5605 1.00049 1.85725 1.00049 2.16667ZM8.65674 2.16667C8.65674 2.47609 8.77197 2.77283 8.97709 2.99162C9.18221 3.21042 9.46041 3.33333 9.75049 3.33333C10.0406 3.33333 10.3188 3.21042 10.5239 2.99162C10.729 2.77283 10.8442 2.47609 10.8442 2.16667C10.8442 1.85725 10.729 1.5605 10.5239 1.34171C10.3188 1.12292 10.0406 1 9.75049 1C9.46041 1 9.18221 1.12292 8.97709 1.34171C8.77197 1.5605 8.65674 1.85725 8.65674 2.16667ZM16.313 2.16667C16.313 2.47609 16.4282 2.77283 16.6333 2.99162C16.8385 3.21042 17.1167 3.33333 17.4067 3.33333C17.6968 3.33333 17.975 3.21042 18.1801 2.99162C18.3853 2.77283 18.5005 2.47609 18.5005 2.16667C18.5005 1.85725 18.3853 1.5605 18.1801 1.34171C17.975 1.12292 17.6968 1 17.4067 1C17.1167 1 16.8385 1.12292 16.6333 1.34171C16.4282 1.5605 16.313 1.85725 16.313 2.16667Z" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="topbar-icon round" id="person-btn">
+        <svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8.42105 10.7278V12.4197C7.65888 12.1607 6.84318 12.0812 6.04245 12.188C5.24171 12.2948 4.47933 12.5848 3.81931 13.0335C3.1593 13.4822 2.62092 14.0767 2.2494 14.7669C1.87788 15.4571 1.68406 16.2229 1.68421 17H4.84389e-07C-0.000389458 16.0114 0.234659 15.0359 0.687132 14.1481C1.13961 13.2603 1.79749 12.484 2.61038 11.8784C3.42326 11.2729 4.36956 10.8543 5.37676 10.6547C6.38397 10.4551 7.42533 10.4807 8.42105 10.7278ZM6.73684 9.71429C3.94526 9.71429 1.68421 7.54071 1.68421 4.85714C1.68421 2.17357 3.94526 0 6.73684 0C9.52842 0 11.7895 2.17357 11.7895 4.85714C11.7895 7.54071 9.52842 9.71429 6.73684 9.71429ZM6.73684 8.09524C8.5979 8.09524 10.1053 6.64619 10.1053 4.85714C10.1053 3.0681 8.5979 1.61905 6.73684 1.61905C4.87579 1.61905 3.36842 3.0681 3.36842 4.85714C3.36842 6.64619 4.87579 8.09524 6.73684 8.09524ZM11.7895 12.9524V10.5238H13.4737V12.9524H16V14.5714H13.4737V17H11.7895V14.5714H9.26316V12.9524H11.7895Z" fill="white"/>
+        </svg>
+        <span class="tooltip" style="right: -43px;">Gruppen-Chat starten</span>
+      </button>
+      <button class="topbar-icon round" id="grid-btn">
+        <svg width="19" height="16" viewBox="0 0 19 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5.22365 13.9167C3.55226 13.1747 2.42757 13.8644 1.4353 13.9882C1.3611 13.9969 1.28543 13.9911 1.21451 13.9711C1.14359 13.9511 1.07943 13.9176 1.02729 13.8732C0.949598 13.8051 0.898251 13.7194 0.879771 13.6272C0.861291 13.535 0.876512 13.4403 0.923501 13.3552C1.15971 12.8969 1.3834 12.1895 1.41561 11.4342M10.5912 0.836883C9.70201 0.721039 8.7962 0.721039 7.90699 0.836883M14.2337 2.07921C14.9622 2.515 15.6029 3.04239 16.1324 3.64207M17.6445 6.64473C17.7852 7.37702 17.7852 8.12298 17.6445 8.85527M16.1324 11.8579C15.6028 12.4574 14.9621 12.9845 14.2337 13.4201M10.5912 14.6631C9.70201 14.779 8.7962 14.779 7.90699 14.6631M0.855501 8.85527C0.714833 8.12298 0.714833 7.37702 0.855501 6.64473M2.36404 3.64501C2.89348 3.04507 3.53419 2.51743 4.26269 2.08142" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="tooltip">Tempären Chat aktivieren</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- HOME VIEW -->
+  <div id="home-view">
+    <h1 class="main-heading">Was liegt heute an?</h1>
+    <div class="input-area">
+      <div class="input-wrapper">
+        <button class="attach-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1V15M1 8H15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="tooltip">Dateien und mehr hinzufügen <span style="display:inline-flex;align-items:center;justify-content:center;background:#424242;border-radius:4px;width:16px;height:16px;margin-left:5px;flex-shrink:0;"><svg width="4" height="9" viewBox="0 0 5 11" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.53551 0.041302C4.62256 0.0721179 4.70253 0.119351 4.77085 0.180305C4.83917 0.241259 4.89451 0.314738 4.93371 0.396549C4.97291 0.478359 4.9952 0.566897 4.99931 0.657108C5.00341 0.747319 4.98926 0.837434 4.95764 0.922309L1.36813 10.5474C1.33646 10.6323 1.28796 10.7102 1.22539 10.7768C1.16282 10.8434 1.08742 10.8973 1.00347 10.9355C0.919534 10.9737 0.828704 10.9954 0.736169 10.9993C0.643635 11.0033 0.551208 10.9894 0.464166 10.9586C0.377125 10.9277 0.297173 10.8804 0.228876 10.8194C0.160579 10.7584 0.105275 10.6848 0.06612 10.603C0.0269652 10.5211 0.0047268 10.4326 0.000675146 10.3423C-0.00337651 10.2521 0.0108379 10.162 0.0425062 10.0771L3.63202 0.452928C3.66363 0.368049 3.71206 0.290072 3.77457 0.223449C3.83708 0.156826 3.91244 0.102862 3.99634 0.0646384C4.08023 0.0264148 4.17103 0.00468038 4.26354 0.00067632C4.35606 -0.00332774 4.44847 0.0104769 4.53551 0.041302Z" fill="#AFAFAF"/></svg></span></span>
+        </button>
+        <textarea id="home-textarea" class="chat-input" placeholder="Stelle irgendeine Frage" rows="1"
+                  oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                  onkeydown="handleHomeKey(event)" onpaste="return false;"></textarea>
+        <div class="input-right">
+          <button class="mic-btn">
+            <svg width="13" height="20" viewBox="0 0 13 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0.75 8.40356C0.75 9.25605 0.889859 10.1002 1.16159 10.8878C1.43332 11.6754 1.83161 12.391 2.3337 12.9938C2.8358 13.5966 3.43187 14.0748 4.08789 14.401C4.74391 14.7273 5.44703 14.8952 6.1571 14.8952M6.1571 14.8952C6.86717 14.8952 7.57029 14.7273 8.22631 14.401C8.88233 14.0748 9.47841 13.5966 9.9805 12.9938C10.4826 12.391 10.8809 11.6754 11.1526 10.8878C11.4243 10.1002 11.5642 9.25605 11.5642 8.40356M6.1571 14.8952V18.75M3.20718 18.75H9.10702" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9.10705 3.75256C9.10705 2.09463 7.78607 0.75 6.15713 0.75C4.52819 0.75 3.20721 2.09463 3.20721 3.75256V9.17683C3.20721 10.8348 4.52819 12.1794 6.15713 12.1794C7.78607 12.1794 9.10705 10.8348 9.10705 9.17683V3.75256Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="tooltip">Diktieren</span>
+          </button>
+          <button class="sound-btn voice" id="home-send-btn" onclick="submitFromHome()">
+            <svg id="home-send-icon" width="34" height="34" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M38 19C38 29.4937 29.4937 38 19 38C8.5063 38 0 29.4937 0 19C0 8.5063 8.5063 0 19 0C29.4937 0 38 8.5063 38 19ZM15.9125 11.4C15.257 11.4 14.725 11.932 14.725 12.5875V25.4125C14.725 25.7274 14.8501 26.0295 15.0728 26.2522C15.2955 26.4749 15.5976 26.6 15.9125 26.6C16.2274 26.6 16.5295 26.4749 16.7522 26.2522C16.9749 26.0295 17.1 25.7274 17.1 25.4125V12.5875C17.1 11.932 16.568 11.4 15.9125 11.4ZM28.5 12.5875C28.5 12.2726 28.3749 11.9705 28.1522 11.7478C27.9295 11.5251 27.6274 11.4 27.3125 11.4C26.9976 11.4 26.6955 11.5251 26.4728 11.7478C26.2501 11.9705 26.125 12.2726 26.125 12.5875V25.4125C26.125 25.7274 26.2501 26.0295 26.4728 26.2522C26.6955 26.4749 26.9976 26.6 27.3125 26.6C27.6274 26.6 27.9295 26.4749 28.1522 26.2522C28.3749 26.0295 28.5 25.7274 28.5 25.4125V12.5875ZM10.2125 15.2C9.557 15.2 9.025 15.732 9.025 16.3875V21.6125C9.025 21.9274 9.15011 22.2295 9.37281 22.4522C9.59551 22.6749 9.89756 22.8 10.2125 22.8C10.5274 22.8 10.8295 22.6749 11.0522 22.4522C11.2749 22.2295 11.4 21.9274 11.4 21.6125V16.3875C11.4 15.732 10.868 15.2 10.2125 15.2ZM22.8 15.4375C22.8 15.1226 22.6749 14.8205 22.4522 14.5978C22.2295 14.3751 21.9274 14.25 21.6125 14.25C21.2976 14.25 20.9955 14.3751 20.7728 14.5978C20.5501 14.8205 20.425 15.1226 20.425 15.4375V22.5625C20.425 22.8774 20.5501 23.1795 20.7728 23.4022C20.9955 23.6249 21.2976 23.75 21.6125 23.75C21.9274 23.75 22.2295 23.6249 22.4522 23.4022C22.6749 23.1795 22.8 22.8774 22.8 22.5625V15.4375Z" fill="white"/>
+            </svg>
+            <span class="tooltip">Voice verwenden</span>
+          </button>
+        </div>
+      </div>
+      <div class="suggestion" id="suggestion-chip" onclick="useSuggestion()">
+        Ich soll auf der Arbeit eine kurze Präsentation über verschiedene Projektmanagement-Methoden vorbereiten (klassisch vs. agil) und eine Empfehlung für unsere zukünftige Arbeitsweise geben. Kannst du mir zunächst einen Überblick über diese drei Ansätze geben?
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT VIEW -->
+  <div id="chat-view">
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-bar">
+      <div class="chat-followup" id="chat-followup" onclick="useChatFollowup()"></div>
+      <div class="input-wrapper">
+        <button class="attach-btn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1V15M1 8H15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="tooltip">Dateien und mehr hinzufügen <span style="display:inline-flex;align-items:center;justify-content:center;background:#424242;border-radius:4px;width:16px;height:16px;margin-left:5px;flex-shrink:0;"><svg width="4" height="9" viewBox="0 0 5 11" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.53551 0.041302C4.62256 0.0721179 4.70253 0.119351 4.77085 0.180305C4.83917 0.241259 4.89451 0.314738 4.93371 0.396549C4.97291 0.478359 4.9952 0.566897 4.99931 0.657108C5.00341 0.747319 4.98926 0.837434 4.95764 0.922309L1.36813 10.5474C1.33646 10.6323 1.28796 10.7102 1.22539 10.7768C1.16282 10.8434 1.08742 10.8973 1.00347 10.9355C0.919534 10.9737 0.828704 10.9954 0.736169 10.9993C0.643635 11.0033 0.551208 10.9894 0.464166 10.9586C0.377125 10.9277 0.297173 10.8804 0.228876 10.8194C0.160579 10.7584 0.105275 10.6848 0.06612 10.603C0.0269652 10.5211 0.0047268 10.4326 0.000675146 10.3423C-0.00337651 10.2521 0.0108379 10.162 0.0425062 10.0771L3.63202 0.452928C3.66363 0.368049 3.71206 0.290072 3.77457 0.223449C3.83708 0.156826 3.91244 0.102862 3.99634 0.0646384C4.08023 0.0264148 4.17103 0.00468038 4.26354 0.00067632C4.35606 -0.00332774 4.44847 0.0104769 4.53551 0.041302Z" fill="#AFAFAF"/></svg></span></span>
+        </button>
+        <textarea id="chat-textarea" class="chat-input" placeholder="Stelle irgendeine Frage" rows="1"
+                  oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';hideChatFollowup();"
+                  onkeydown="handleChatKey(event)" onpaste="return false;"></textarea>
+        <div class="input-right">
+          <button class="mic-btn">
+            <svg width="13" height="20" viewBox="0 0 13 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0.75 8.40356C0.75 9.25605 0.889859 10.1002 1.16159 10.8878C1.43332 11.6754 1.83161 12.391 2.3337 12.9938C2.8358 13.5966 3.43187 14.0748 4.08789 14.401C4.74391 14.7273 5.44703 14.8952 6.1571 14.8952M6.1571 14.8952C6.86717 14.8952 7.57029 14.7273 8.22631 14.401C8.88233 14.0748 9.47841 13.5966 9.9805 12.9938C10.4826 12.391 10.8809 11.6754 11.1526 10.8878C11.4243 10.1002 11.5642 9.25605 11.5642 8.40356M6.1571 14.8952V18.75M3.20718 18.75H9.10702" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9.10705 3.75256C9.10705 2.09463 7.78607 0.75 6.15713 0.75C4.52819 0.75 3.20721 2.09463 3.20721 3.75256V9.17683C3.20721 10.8348 4.52819 12.1794 6.15713 12.1794C7.78607 12.1794 9.10705 10.8348 9.10705 9.17683V3.75256Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="tooltip">Diktieren</span>
+          </button>
+          <button class="sound-btn voice" id="chat-send-btn" onclick="submitFromChat()">
+            <svg id="chat-send-icon" width="34" height="34" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M38 19C38 29.4937 29.4937 38 19 38C8.5063 38 0 29.4937 0 19C0 8.5063 8.5063 0 19 0C29.4937 0 38 8.5063 38 19ZM15.9125 11.4C15.257 11.4 14.725 11.932 14.725 12.5875V25.4125C14.725 25.7274 14.8501 26.0295 15.0728 26.2522C15.2955 26.4749 15.5976 26.6 15.9125 26.6C16.2274 26.6 16.5295 26.4749 16.7522 26.2522C16.9749 26.0295 17.1 25.7274 17.1 25.4125V12.5875C17.1 11.932 16.568 11.4 15.9125 11.4ZM28.5 12.5875C28.5 12.2726 28.3749 11.9705 28.1522 11.7478C27.9295 11.5251 27.6274 11.4 27.3125 11.4C26.9976 11.4 26.6955 11.5251 26.4728 11.7478C26.2501 11.9705 26.125 12.2726 26.125 12.5875V25.4125C26.125 25.7274 26.2501 26.0295 26.4728 26.2522C26.6955 26.4749 26.9976 26.6 27.3125 26.6C27.6274 26.6 27.9295 26.4749 28.1522 26.2522C28.3749 26.0295 28.5 25.7274 28.5 25.4125V12.5875ZM10.2125 15.2C9.557 15.2 9.025 15.732 9.025 16.3875V21.6125C9.025 21.9274 9.15011 22.2295 9.37281 22.4522C9.59551 22.6749 9.89756 22.8 10.2125 22.8C10.5274 22.8 10.8295 22.6749 11.0522 22.4522C11.2749 22.2295 11.4 21.9274 11.4 21.6125V16.3875C11.4 15.732 10.868 15.2 10.2125 15.2ZM22.8 15.4375C22.8 15.1226 22.6749 14.8205 22.4522 14.5978C22.2295 14.3751 21.9274 14.25 21.6125 14.25C21.2976 14.25 20.9955 14.3751 20.7728 14.5978C20.5501 14.8205 20.425 15.1226 20.425 15.4375V22.5625C20.425 22.8774 20.5501 23.1795 20.7728 23.4022C20.9955 23.6249 21.2976 23.75 21.6125 23.75C21.9274 23.75 22.2295 23.6249 22.4522 23.4022C22.6749 23.1795 22.8 22.8774 22.8 22.5625V15.4375Z" fill="white"/>
+            </svg>
+            <span class="tooltip">Voice verwenden</span>
+          </button>
+        </div>
+      </div>
+      <div class="chat-footer-note">ChatGPT kann Fehler machen. Überprüfe wichtige Informationen. <a href="#">Siehe Cookie-Voreinstellungen.</a></div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <!-- Prompt state -->
+    <div class="modal-prompt" id="modal-prompt">
+      <div class="modal-title">Bist du sicher, dass du die Recherche beenden möchtest?</div>
+      <div class="modal-body">Du wirst den Chat danach nicht mehr lesen können.</div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" onclick="closeEndModal()">Abbrechen</button>
+        <button class="modal-btn modal-btn-confirm" onclick="confirmEndResearch()">Recherche beenden</button>
+      </div>
+    </div>
+    <!-- Confirmed state -->
+    <div class="modal-confirmed" id="modal-confirmed">
+      <div class="modal-confirmed-title">Recherche beendet</div>
+      <div class="modal-confirmed-body">Du kannst nun zum Fragebogen Tab zurückkehren.</div>
+    </div>
+  </div>
+</div>
+
+<div id="global-tooltip" style="display:none; position:fixed; background:#000; color:#fff; font-size:12px; font-weight:300; padding:5px 10px; border-radius:8px; white-space:nowrap; pointer-events:none; z-index:99999;"></div>
+
+<script>
+  // ── Conversation data ──────────────────────────────────────────────────────
+  const CONVERSATION = [
+    {
+      followupTrigger: "Ich soll auf der Arbeit eine kurze Präsentation über verschiedene Projektmanagement-Methoden vorbereiten (klassisch vs. agil) und eine Empfehlung für unsere zukünftige Arbeitsweise geben. Kannst du mir zunächst einen Überblick über diese drei Ansätze geben?",
+      response: `Sehr gerne! 😊 Das Thema ist aktuell besonders relevant, da Unternehmen zunehmend mit **komplexeren und dynamischeren Projekten** arbeiten ⚙️\n\n---\n\nGrundsätzlich lassen sich Projektmanagement-Methoden in drei Kategorien einteilen: **klassische**, **agile** und **hybride** Ansätze.\n\n**Klassisches Projektmanagement** (z. B. Wasserfallmodell) basiert auf einer **linearen Struktur**. Projekte werden in klar definierte Phasen unterteilt, die nacheinander abgearbeitet werden. Dieses Modell geht davon aus, dass Anforderungen zu Beginn weitgehend **bekannt und stabil** sind.\n\n**Agile Methoden** (z. B. Scrum) wurden insbesondere durch das **Agile Manifest (Beck et al., 2001)** geprägt. Sie setzen auf **iterative Entwicklung**, enge Zusammenarbeit und **kontinuierliches Feedback**. Planung erfolgt schrittweise und wird regelmäßig angepasst.\n\n**Hybride Ansätze** kombinieren beide Perspektiven. Laut dem **Project Management Institute (PMI, 2021)** nutzen viele Unternehmen Mischformen, um sowohl **Planungssicherheit** als auch **Flexibilität** zu erreichen.\n\n---\n\n👉 Kurz zusammengefasst:\n* **Klassisch:** strukturiert und planungsgetrieben 📋\n* **Agil:** flexibel und iterativ 🔄\n* **Hybrid:** Kombination beider Ansätze ⚖️\n\nDie wesentlichen Unterschiede liegen darin, wie mit **Planung**, **Unsicherheit** und **Veränderungen** umgegangen wird.\n\n---\n\nWollen wir nun tiefer einsteigen, z. B. in die konkreten Vor- und Nachteile der Methoden?`,
+      followupText: "Was zeichnet klassisches Projektmanagement aus und welche Vor- und Nachteile hat es?"
+    },
+    {
+      response: `Klassisches Projektmanagement zielt darauf ab, Projekte möglichst **planbar und kontrollierbar** zu machen 🏗️\n\n---\n\nIm Zentrum steht eine **detaillierte Vorausplanung**. Anforderungen, Zeitpläne und Ressourcen werden früh festgelegt und bilden die Grundlage für den gesamten Projektverlauf. Dieses Vorgehen ist besonders in **technischen und regulierten Bereichen** verbreitet.\n\nStudien wie der **CHAOS Report der Standish Group** zeigen, dass klassische Ansätze gut funktionieren, wenn Anforderungen **stabil** sind und sich im Verlauf kaum ändern.\n\n---\n\nVorteile:\n* hohe **Planungssicherheit** und klare Struktur 📊\n* transparente Abläufe und **Verantwortlichkeiten** 📋\n* gut geeignet für Projekte mit **festen Anforderungen** 🧱\n\nNachteile:\n* geringe **Flexibilität** bei Änderungen ⚠️\n* Feedback erfolgt oft **erst spät** im Prozess ⏳\n* Risiko, dass **initiale Annahmen** nicht mehr passen 📐\n\nInsgesamt bietet der Ansatz **Stabilität**, ist jedoch weniger geeignet für **dynamische oder unsichere Projekte**.\n\n---\n\nSoll ich dir im nächsten Schritt die agile Arbeitsweise gegenüberstellen?`,
+      followupText: "Wie funktioniert agiles Projektmanagement (z. B. Scrum) und welche Vor- und Nachteile gibt es?"
+    },
+    {
+      response: `Agiles Projektmanagement verfolgt einen **flexibleren und iterativen** Ansatz 🔄\n\n---\n\nAnstatt ein Projekt vollständig im Voraus zu planen, wird die Arbeit in kurze Zyklen (**Sprints**) unterteilt. Nach jedem Zyklus werden Ergebnisse überprüft und angepasst.\n\nDas **Agile Manifest (Beck et al., 2001)** stellt dabei **Anpassungsfähigkeit** und **Zusammenarbeit** in den Vordergrund. Studien (z. B. **Dingsøyr et al., 2012**) zeigen, dass agile Methoden besonders in **komplexen und sich schnell verändernden Umfeldern** effektiv sind.\n\n---\n\nTypische Vorteile:\n* hohe **Flexibilität** bei Änderungen ⚡\n* **kontinuierliches Feedback** und Verbesserung 🔁\n* enge **Zusammenarbeit** im Team 🤝\n\nTypische Herausforderungen:\n* geringere **langfristige Planbarkeit** 📉\n* höherer **Kommunikationsaufwand** 💬\n* starke Abhängigkeit von **Teamorganisation** 👥\n\nAgile Methoden sind besonders dann sinnvoll, wenn Anforderungen **nicht vollständig vorhersagbar** sind.\n\n---\n\nMöchtest du als Nächstes sehen, wie hybride Ansätze diese beiden Modelle verbinden?`,
+      followupText: "Was versteht man unter hybriden Projektmanagement-Ansätzen?"
+    },
+    {
+      response: `Hybride Ansätze sind quasi die **goldene Mitte** und versuchen, die Vorteile klassischer und agiler Methoden zu kombinieren ⚖️\n\n---\n\nIn der Praxis bedeutet das häufig, dass Projekte eine übergeordnete **klassische Struktur** haben, während einzelne Phasen oder Arbeitspakete **agil umgesetzt** werden.\n\nDer **„Pulse of the Profession"-Report (PMI, 2021)** zeigt, dass solche Mischformen in vielen Unternehmen zunehmend verbreitet sind, da sie sowohl **Stabilität** als auch **Anpassungsfähigkeit** ermöglichen.\n\n---\n\nTypische Merkmale:\n* klare **Zieldefinition** und Planung 🗒️\n* **iterative Umsetzung** einzelner Teile 🔄\n* flexible Anpassung je nach **Projektphase** ⚡️\n\nDadurch entsteht ein Ansatz, der **situativ angepasst** werden kann, allerdings auch höhere Anforderungen an **Koordination** stellt.\n\n---\n\nMöchtest du dir nun die Unterschiede zwischen den drei Methoden im Bezug auf **Planung und Flexibilität** ansehen?`,
+      followupText: "Wie unterscheiden sich die drei Ansätze in Bezug auf Planung und Flexibilität?"
+    },
+    {
+      response: `Das ist ein zentraler Punkt, wo sich deutliche Unterschiede bemerkbar machen! Die Unterschiede zeigen sich besonders im Umgang mit **Planung und Veränderung** 📊\n\n---\n\n**Klassische Methoden** setzen auf umfassende Planung zu Beginn. Das schafft **Stabilität**, schränkt jedoch die **Anpassungsfähigkeit** ein.\n\n**Agile Methoden** planen bewusst weniger im Voraus und reagieren flexibel auf neue Anforderungen. Das erhöht die **Anpassungsfähigkeit**, reduziert aber die **Vorhersagbarkeit**.\n\n**Hybride Ansätze** kombinieren beide Prinzipien. Forschung (z. B. **Serrador & Pinto, 2015**) zeigt, dass diese Kombination in vielen Fällen zu **besseren Projektergebnissen** führen kann, wenn sie richtig umgesetzt wird.\n\n👉 Vergleich:\n* **Klassisch:** hohe Planung, geringe Flexibilität 📋\n* **Agil:** geringe Planung, hohe Flexibilität 🔄\n* **Hybrid:** ausgewogene Kombination ⚖️\n\nDie Wahl hängt stark davon ab, wie **stabil oder dynamisch** die Anforderungen sind.\n\n---\n\nMöchtest du als nächstes betrachten, wie sich die Methoden auf **Teamarbeit und Kommunikation** auswirken?`,
+      followupText: "Welche Auswirkungen haben die Methoden auf Teamarbeit und Kommunikation?"
+    },
+    {
+      response: `Ein guter und meist unterschätzter Punkt! Die **Projektmethode** beeinflusst direkt, wie Teams zusammenarbeiten 🤝\n\n---\n\nIn **klassischen Projekten** erfolgt Kommunikation meist entlang klarer **Strukturen und Hierarchien**. Informationen werden geplant weitergegeben, was für Klarheit sorgt, aber weniger spontan ist.\n\n**Agile Methoden** setzen auf regelmäßigen, direkten Austausch. Formate wie **Daily Stand-ups** oder **Retrospektiven** fördern Transparenz und Zusammenarbeit. Studien (z. B. **Moe et al., 2010**) zeigen, dass dies die **Teamdynamik** stärken kann.\n\n**Hybride Modelle** kombinieren strukturierte und flexible Kommunikationsformen.\n\n---\n\nTypische Unterschiede:\n* **Klassisch:** strukturiert und formell 📋\n* **Agil:** häufig und direkt 💬\n* **Hybrid:** kombinierter Ansatz 🔄\n\nDamit wird deutlich, dass agile Methoden stärker auf **aktive Kommunikation** angewiesen sind.\n\n---\n\nMöchtest du als nächsten Schritt sehen, wie sich die Methoden auf **Projektergebnisse** auswirken?`,
+      followupText: "Wie beeinflussen die Methoden den Projekterfolg und die Qualität der Ergebnisse?"
+    },
+    {
+      response: `Die Frage nach dem **Projekterfolg** ist zentral, weil er direkt mit wirtschaftlichen Entscheidungen zusammenhängt! Der Einfluss auf **Projekterfolg und Qualität** ist stark kontextabhängig 📈\n\n---\n\n**Klassische Methoden** liefern stabile Ergebnisse, sofern Anforderungen korrekt definiert sind. Probleme zeigen sich jedoch oft **erst spät**.\n\n**Agile Methoden** ermöglichen **frühzeitiges Feedback** und kontinuierliche Verbesserung. Studien (z. B. **Serrador & Pinto, 2015**) zeigen, dass dies häufig zu höherer **Kundenzufriedenheit** führt.\n\n**Hybride Ansätze** versuchen, stabile Planung mit **iterativer Optimierung** zu verbinden.\n\n---\n\nWichtige Faktoren sind:\n* **Klarheit der Anforderungen** 🔍\n* **Feedbackprozesse** 🔁\n* **Anpassungsfähigkeit** 🤝\n\nInsgesamt zeigt sich, dass die Methode zur **Projektumgebung passen** muss.\n\n---\n\nMöchtest du als nächstes betrachten, für welche **Projekte** sich die Methoden eignen?`,
+      followupText: "Für welche Arten von Projekten eignen sich die jeweiligen Methoden am besten?"
+    },
+    {
+      response: `Eine wichtige Frage, denn die **Eignung** hängt stark von der Art des Projekts ab! 🧩\n\n---\n\n**Klassisches Projektmanagement** eignet sich besonders für Projekte mit **stabilen Anforderungen** und klaren Abläufen, etwa im **Bauwesen** oder in **regulierten Branchen**.\n\n**Agile Methoden** sind besonders geeignet für **dynamische Projekte** mit hoher Unsicherheit, z. B. in der **Softwareentwicklung**.\n\n**Hybride Ansätze** kommen zum Einsatz, wenn sowohl **Planungssicherheit** als auch **Flexibilität** benötigt werden.\n\n---\n\n👉 Typische Zuordnung:\n* **Klassisch:** stabile Projekte 📋\n* **Agil:** dynamische Projekte 🔄\n* **Hybrid:** gemischte Anforderungen ⚖️\n\nDamit wird deutlich, dass die Wahl stark vom **Kontext** abhängt.\n\n---\n\nMöchtest du noch einen spezifischen Aspekt vertiefen, bevor wir die wichtigsten Erkenntnisse zusammenfassen?`,
+      followupText: "Wie unterscheiden sich die Rollen und Verantwortlichkeiten in klassischen, agilen und hybriden Projekten?"
+    },
+    {
+      response: `Die Verteilung von **Rollen und Verantwortlichkeiten** unterscheidet sich deutlich zwischen den Ansätzen und hat großen Einfluss auf die **Arbeitsweise** im Projekt 👥\n\n---\n\nIm **klassischen Projektmanagement** sind Rollen meist klar **hierarchisch organisiert**. Es gibt typischerweise eine **Projektleitung**, die Planung, Steuerung und Kontrolle übernimmt. Aufgaben und Verantwortlichkeiten sind klar definiert und werden **top-down** verteilt.\n\n**Agile Methoden** verfolgen ein anderes Modell. Hier stehen **selbstorganisierte Teams** im Mittelpunkt. Rollen wie **Product Owner** und **Scrum Master** haben klar definierte Verantwortungsbereiche, jedoch weniger klassische Weisungsbefugnis. Entscheidungen werden häufiger **im Team** getroffen. Studien (z. B. **Moe et al., 2010**) zeigen, dass diese Struktur die **Eigenverantwortung** und Motivation erhöhen kann.\n\n**Hybride Ansätze** kombinieren beide Logiken. Es existieren oft weiterhin klassische **Führungsrollen**, während Teams in bestimmten Bereichen **eigenständig** arbeiten.\n\n---\n\n👉 Unterschiede im Überblick:\n* **Klassisch:** klare Hierarchien und zentrale Steuerung 📋\n* **Agil:** verteilte Verantwortung und Selbstorganisation 🔄\n* **Hybrid:** Kombination aus Führung und Teamautonomie ⚖️\n\nDamit verändert sich nicht nur die **Organisation der Arbeit**, sondern auch die Rolle von **Führung und Zusammenarbeit** im Projekt.\n\n---\n\nMöchtest du zum Abschluss die wichtigsten Erkenntnisse für Unternehmen kompakt zusammengefasst haben?`,
+      followupText: "Was sind die wichtigsten Erkenntnisse für Unternehmen im Umgang mit diesen Projektmanagement-Methoden?"
+    },
+    {
+      response: `Wenn man die verschiedenen Aspekte zusammen betrachtet, ergibt sich ein differenziertes **Gesamtbild** 📌\n\n---\n\nZunächst zeigt sich, dass es **keine universell beste Methode** gibt. Der Erfolg hängt stark davon ab, wie gut die gewählte Arbeitsweise zu den **Anforderungen des jeweiligen Projekts** passt.\n\nEin zentraler Faktor ist der Umgang mit **Unsicherheit**. Während klassische Methoden **Stabilität** bieten, ermöglichen agile Ansätze eine bessere **Anpassung an Veränderungen**. Studien (z. B. **Serrador & Pinto, 2015**) zeigen, dass insbesondere in dynamischen Umfeldern **flexible Vorgehensweisen** Vorteile bringen können.\n\nGleichzeitig bleibt **Struktur essenziell**. Auch in agilen Projekten sind klare **Rollen, Prozesse** und **Zieldefinitionen** notwendig, um effektiv zu arbeiten. Praxisberichte (z. B. **PMI, 2021**) zeigen zudem, dass **hybride Modelle** zunehmend an Bedeutung gewinnen, da sie versuchen, beide Perspektiven zu vereinen.\n\n---\n\nDie wichtigsten Erkenntnisse:\n* Die **Passung zur Projektsituation** ist entscheidend 📊\n* **Flexibilität** gewinnt an Bedeutung 🔄\n* **Struktur** bleibt notwendig 📋\n* **Hybride Ansätze** werden häufiger genutzt ⚖️\n\nZusammenfassend zeigt sich, dass erfolgreiches Projektmanagement vor allem davon abhängt, wie **bewusst Methoden ausgewählt** und an den jeweiligen **Kontext angepasst** werden.\n\n---\n\nMöchtest du, dass wir aus diesen Erkenntnissen nun direkt eine konkrete **Handlungsempfehlung** für dein Unternehmen formulieren?`,
+      followupText: null
+    }
+  ];
+
+  const TOTAL_TURNS = CONVERSATION.length;
+  let turnIndex = 0;
+
+  const SUGGESTION_TEXT = CONVERSATION[0].followupTrigger;
+  const homeTA = document.getElementById('home-textarea');
+  const chip = document.getElementById('suggestion-chip');
+
+  homeTA.addEventListener('focus', () => { if (chip.dataset.used !== 'true') chip.classList.add('visible'); });
+  homeTA.addEventListener('blur', () => {
+    setTimeout(() => { if (document.activeElement !== chip) chip.classList.remove('visible'); }, 150);
+  });
+
+  function useSuggestion() {
+    homeTA.value = '';
+    homeTA.focus();
+    chip.classList.remove('visible');
+    chip.dataset.used = 'true';
+    let i = 0;
+    setSendBtn('home-send-btn', 'home-send-icon', 'typing');
+    function type() {
+      if (i < SUGGESTION_TEXT.length) {
+        homeTA.value += SUGGESTION_TEXT[i++];
+        homeTA.style.height = 'auto';
+        homeTA.style.height = homeTA.scrollHeight + 'px';
+        setTimeout(type, 40);
+      } else {
+        setSendBtn('home-send-btn', 'home-send-icon', 'ready');
+      }
+    }
+    type();
+  }
+
+  function handleHomeKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const btn = document.getElementById('home-send-btn');
+      if (btn.classList.contains('ready')) submitFromHome();
+    } else if (e.key !== 'Tab') {
+      e.preventDefault();
+    }
+  }
+
+  function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const btn = document.getElementById('chat-send-btn');
+      if (btn.classList.contains('ready')) submitFromChat();
+    } else if (e.key !== 'Tab') {
+      e.preventDefault();
+    }
+  }
+
+  const VOICE_ICON = `<path d="M38 19C38 29.4937 29.4937 38 19 38C8.5063 38 0 29.4937 0 19C0 8.5063 8.5063 0 19 0C29.4937 0 38 8.5063 38 19ZM15.9125 11.4C15.257 11.4 14.725 11.932 14.725 12.5875V25.4125C14.725 25.7274 14.8501 26.0295 15.0728 26.2522C15.2955 26.4749 15.5976 26.6 15.9125 26.6C16.2274 26.6 16.5295 26.4749 16.7522 26.2522C16.9749 26.0295 17.1 25.7274 17.1 25.4125V12.5875C17.1 11.932 16.568 11.4 15.9125 11.4ZM28.5 12.5875C28.5 12.2726 28.3749 11.9705 28.1522 11.7478C27.9295 11.5251 27.6274 11.4 27.3125 11.4C26.9976 11.4 26.6955 11.5251 26.4728 11.7478C26.2501 11.9705 26.125 12.2726 26.125 12.5875V25.4125C26.125 25.7274 26.2501 26.0295 26.4728 26.2522C26.6955 26.4749 26.9976 26.6 27.3125 26.6C27.6274 26.6 27.9295 26.4749 28.1522 26.2522C28.3749 26.0295 28.5 25.7274 28.5 25.4125V12.5875ZM10.2125 15.2C9.557 15.2 9.025 15.732 9.025 16.3875V21.6125C9.025 21.9274 9.15011 22.2295 9.37281 22.4522C9.59551 22.6749 9.89756 22.8 10.2125 22.8C10.5274 22.8 10.8295 22.6749 11.0522 22.4522C11.2749 22.2295 11.4 21.9274 11.4 21.6125V16.3875C11.4 15.732 10.868 15.2 10.2125 15.2ZM22.8 15.4375C22.8 15.1226 22.6749 14.8205 22.4522 14.5978C22.2295 14.3751 21.9274 14.25 21.6125 14.25C21.2976 14.25 20.9955 14.3751 20.7728 14.5978C20.5501 14.8205 20.425 15.1226 20.425 15.4375V22.5625C20.425 22.8774 20.5501 23.1795 20.7728 23.4022C20.9955 23.6249 21.2976 23.75 21.6125 23.75C21.9274 23.75 22.2295 23.6249 22.4522 23.4022C22.6749 23.1795 22.8 22.8774 22.8 22.5625V15.4375Z" fill="white"/>`;
+  const STOP_ICON = `<circle cx="19" cy="19" r="19" fill="#424242"/><path fill-rule="evenodd" clip-rule="evenodd" d="M13 14.5C13 14.1022 13.158 13.7206 13.4393 13.4393C13.7206 13.158 14.1022 13 14.5 13H23.5C23.8978 13 24.2794 13.158 24.5607 13.4393C24.842 13.7206 25 14.1022 25 14.5V23.5C25 23.8978 24.842 24.2794 24.5607 24.5607C24.2794 24.842 23.8978 25 23.5 25H14.5C14.1022 25 13.7206 24.842 13.4393 24.5607C13.158 24.2794 13 23.8978 13 23.5V14.5Z" fill="white"/>`;
+  const ARROW_ICON = `<circle cx="19" cy="19" r="19" fill="white"/><path d="M19 12V26M19 12L25 18M19 12L13 18" stroke="#212121" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+  function setSendBtn(btnId, iconId, state) {
+    const btn = document.getElementById(btnId);
+    const icon = document.getElementById(iconId);
+    if (!btn || !icon) return;
+    btn.classList.remove('typing', 'ready', 'voice');
+    icon.setAttribute('width', '34');
+    icon.setAttribute('height', '34');
+    if (state === 'typing') {
+      btn.classList.add('typing');
+      icon.innerHTML = STOP_ICON;
+    } else if (state === 'ready') {
+      btn.classList.add('ready');
+      icon.innerHTML = ARROW_ICON;
+    } else {
+      btn.classList.add('voice');
+      icon.innerHTML = VOICE_ICON;
+    }
+  }
+
+  const sidebar = document.querySelector('.sidebar');
+
+  function openSidebar() { sidebar.classList.remove('collapsed'); }
+  function closeSidebar() { sidebar.classList.add('collapsed'); }
+
+  document.getElementById('sidebar-toggle-btn').addEventListener('click', closeSidebar);
+
+  sidebar.addEventListener('click', function(e) {
+    if (sidebar.classList.contains('collapsed')) {
+      if (!e.target.closest('.nav-item, button, .user-info')) openSidebar();
+    }
+  });
+
+  document.querySelector('.logo').addEventListener('click', function() {
+    if (sidebar.classList.contains('collapsed')) openSidebar();
+  });
+
+  document.getElementById('home-textarea').addEventListener('input', function() {
+    if (this.value.trim().length > 0) setSendBtn('home-send-btn', 'home-send-icon', 'ready');
+    else setSendBtn('home-send-btn', 'home-send-icon', 'voice');
+  });
+
+  document.getElementById('chat-textarea').addEventListener('input', function() {
+    if (this.value.trim().length > 0) setSendBtn('chat-send-btn', 'chat-send-icon', 'ready');
+    else setSendBtn('chat-send-btn', 'chat-send-icon', 'voice');
+    hideChatFollowup();
+  });
+
+  function submitFromHome() {
+    const btn = document.getElementById('home-send-btn');
+    if (!btn.classList.contains('ready')) return;
+    const text = homeTA.value.trim();
+    if (!text) return;
+    switchToChat(text);
+  }
+
+  function submitFromChat() {
+    const btn = document.getElementById('chat-send-btn');
+    if (!btn.classList.contains('ready')) return;
+    const ta = document.getElementById('chat-textarea');
+    const text = ta.value.trim();
+    if (!text) return;
+    ta.value = ''; ta.style.height = 'auto';
+    setSendBtn('chat-send-btn', 'chat-send-icon', 'voice');
+    hideChatFollowup();
+    addUserMessage(text);
+    streamResponse();
+  }
+
+  function switchToChat(text) {
+    document.getElementById('home-view').style.display = 'none';
+    document.getElementById('chat-view').classList.add('active');
+    document.getElementById('share-btn').style.display = 'flex';
+    document.getElementById('more-btn').style.display = 'flex';
+    document.getElementById('person-btn').style.display = 'none';
+    document.getElementById('grid-btn').style.display = 'none';
+    addUserMessage(text);
+    streamResponse();
+    typeChatTitle(text);
+    setSendBtn('home-send-btn', 'home-send-icon', 'voice');
+  }
+
+  function typeChatTitle(text) {
+    const title = 'Management Agil vs. Klassisch';
+    const historyEl = document.getElementById('sidebar-history');
+    const textEl = document.getElementById('history-item-text');
+    textEl.textContent = '';
+    historyEl.style.display = 'block';
+    let i = 0;
+    function type() {
+      if (i < title.length) { textEl.textContent += title[i++]; setTimeout(type, 25); }
+    }
+    setTimeout(type, 200);
+  }
+
+  function addUserMessage(text) {
+    const msgs = document.getElementById('chat-messages');
+    const row = document.createElement('div');
+    row.className = 'message-row';
+    row.innerHTML = `
+      <div class="user-bubble">
+        <div class="user-bubble-inner">${esc(text)}</div>
+        <div class="bubble-actions">
+          <button class="bubble-action-btn">
+            <span class="action-tooltip">Kopieren</span>
+            <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M3.6 3.6V1.2C3.6 0.54 4.14 0 4.8 0H10.8C11.1183 0 11.4235 0.126428 11.6485 0.351472C11.8736 0.576516 12 0.88174 12 1.2V7.2C12 7.51826 11.8736 7.82348 11.6485 8.04853C11.4235 8.27357 11.1183 8.4 10.8 8.4H8.4V10.8C8.4 11.1183 8.27357 11.4235 8.04853 11.6485C7.82348 11.8736 7.51826 12 7.2 12H1.2C0.88174 12 0.576515 11.8736 0.351472 11.6485C0.126428 11.4235 0 11.1183 0 10.8V4.8C0 4.14 0.54 3.6 1.2 3.6H3.6ZM4.8 3.6H7.2C7.51826 3.6 7.82348 3.72643 8.04853 3.95147C8.27357 4.17652 8.4 4.48174 8.4 4.8V7.2H10.8V1.2H4.8V3.6ZM1.2 4.8V10.8H7.2V4.8H1.2Z" fill="white"/></svg>
+          </button>
+          <button class="bubble-action-btn">
+            <span class="action-tooltip">Nachricht bearbeiten</span>
+            <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M11.3717 0.628249C10.9689 0.225963 10.4229 0 9.85367 0C9.2844 0 8.7384 0.225963 8.33563 0.628249L1.16424 7.79921C0.920361 8.04283 0.74898 8.34943 0.669231 8.68478L0.0122137 11.4459C-0.00557583 11.5207 -0.00390794 11.5988 0.0170584 11.6727C0.0380246 11.7467 0.0775903 11.814 0.131982 11.8684C0.186373 11.9227 0.253777 11.9622 0.327764 11.9831C0.401752 12.004 0.479856 12.0055 0.554628 11.9877L3.3153 11.3301C3.65089 11.2505 3.95773 11.0791 4.20152 10.8351L11.3717 3.66535C11.774 3.2626 12 2.71664 12 2.1474C12 1.57816 11.774 1.03219 11.3717 0.629449M8.97165 1.26543C9.08748 1.14961 9.22499 1.05773 9.37633 0.995048C9.52766 0.932365 9.68987 0.900103 9.85367 0.900103C10.0175 0.900103 10.1797 0.932365 10.331 0.995048C10.4824 1.05773 10.6199 1.14961 10.7357 1.26543C10.8515 1.38125 10.9434 1.51875 11.0061 1.67008C11.0688 1.82141 11.101 1.9836 11.101 2.1474C11.101 2.3112 11.0688 2.47339 11.0061 2.62472C10.9434 2.77605 10.8515 2.91355 10.7357 3.02937L10.2005 3.56275L8.43644 1.79941L8.97165 1.26543ZM7.80042 2.43659L9.56447 4.19933L3.56431 10.1991C3.4383 10.3251 3.2799 10.4133 3.1065 10.4547L1.05684 10.9431L1.54465 8.89357C1.58606 8.71958 1.67486 8.56118 1.80086 8.43519L7.80042 2.43659Z" fill="white"/></svg>
+          </button>
+        </div>
+      </div>`;
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function streamResponse() {
+    const turn = CONVERSATION[turnIndex];
+    if (!turn) return;
+
+    const msgs = document.getElementById('chat-messages');
+    const row = document.createElement('div');
+    row.className = 'message-row';
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'assistant-msg';
+    row.appendChild(msgDiv);
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    const words = turn.response.split(' ');
+    let i = 0, built = '';
+
+    function next() {
+      if (i < words.length) {
+        built += (i === 0 ? '' : ' ') + words[i++];
+        msgDiv.innerHTML = md(built);
+        msgs.scrollTop = msgs.scrollHeight;
+        setTimeout(next, 65);
+      } else {
+        msgDiv.innerHTML = md(built);
+
+        const bar = document.createElement('div');
+        bar.className = 'action-bar';
+        bar.innerHTML = `
+          <button class="action-btn"><span class="action-tooltip">Kopieren</span><svg width="15" height="15" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4.5" y="0.6" width="8" height="8" rx="1.2" fill="#2f2f2f" stroke="white" stroke-width="1.2"/><rect x="0.6" y="4.5" width="8" height="8" rx="1.2" fill="#2f2f2f" stroke="white" stroke-width="1.2"/></svg></button>
+          <button class="action-btn"><span class="action-tooltip">Gute Reaktion</span><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M4.78215 7V16M10.8336 3.91L10.0772 7H14.4871C14.722 7 14.9536 7.05422 15.1637 7.15836C15.3738 7.2625 15.5565 7.41371 15.6974 7.6C15.8383 7.78629 15.9336 8.00256 15.9756 8.23167C16.0176 8.46078 16.0052 8.69645 15.9395 8.92L14.177 14.92C14.0853 15.2316 13.8942 15.5053 13.6324 15.7C13.3705 15.8947 13.052 16 12.7247 16H2.51286C2.11162 16 1.72682 15.842 1.44311 15.5607C1.15939 15.2794 1 14.8978 1 14.5V8.5C1 8.10218 1.15939 7.72064 1.44311 7.43934C1.72682 7.15804 2.11162 7 2.51286 7H4.60061C4.88206 6.99985 5.15789 6.92186 5.39709 6.77479C5.63629 6.62772 5.82937 6.41741 5.95461 6.1675L8.5643 1C8.92101 1.00438 9.27212 1.08863 9.59138 1.24645C9.91064 1.40427 10.1898 1.63158 10.408 1.9114C10.6262 2.19122 10.7778 2.51632 10.8515 2.8624C10.9252 3.20848 10.9191 3.5666 10.8336 3.91Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="action-btn"><span class="action-tooltip">Schlechte Reaktion</span><svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M12.2179 10V1M6.16641 13.09L6.92284 10H2.51286C2.278 10 2.04636 9.94578 1.83629 9.84164C1.62622 9.7375 1.44349 9.58629 1.30257 9.4C1.16165 9.21371 1.06642 8.99744 1.0244 8.76833C0.982389 8.53922 0.994752 8.30355 1.06051 8.08L2.823 2.08C2.91465 1.76843 3.10575 1.49473 3.36763 1.3C3.6295 1.10527 3.948 1 4.27534 1H14.4871C14.8884 1 15.2732 1.15804 15.5569 1.43934C15.8406 1.72064 16 2.10218 16 2.5V8.5C16 8.89782 15.8406 9.27936 15.5569 9.56066C15.2732 9.84196 14.8884 10 14.4871 10H12.3994C12.1179 10.0001 11.8421 10.0781 11.6029 10.2252C11.3637 10.3723 11.1706 10.5826 11.0454 10.8325L8.4357 16C8.07899 15.9956 7.72788 15.9114 7.40862 15.7536C7.08936 15.5957 6.81019 15.3684 6.59198 15.0886C6.37377 14.8088 6.22215 14.4837 6.14846 14.1376C6.07477 13.7915 6.08091 13.4334 6.16641 13.09Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="action-btn"><span class="action-tooltip">Weitergeben</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.75 1V10M7.75 1L11.5 4.75M7.75 1L4 4.75M14.5 10V13C14.5 13.3978 14.342 13.7794 14.0607 14.0607C13.7794 14.342 13.3978 14.5 13 14.5H2.5C2.10218 14.5 1.72064 14.342 1.43934 14.0607C1.15804 13.7794 1 13.3978 1 13V10" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="action-btn"><span class="action-tooltip">Erneut versuchen...<br><span style="color:#AFAFAF;">GPT-5.2 verwendet</span></span><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.32 0.0289774C8.70071 -0.0888589 10.0884 0.153991 11.347 0.733739C12.6056 1.31349 13.6921 2.21025 14.5 3.33618V1.75008C14.5 1.55116 14.579 1.36038 14.7197 1.21972C14.8603 1.07906 15.0511 1.00004 15.25 1.00004C15.4489 1.00004 15.6397 1.07906 15.7803 1.21972C15.921 1.36038 16 1.55116 16 1.75008V6.00035H11.75C11.5511 6.00035 11.3603 5.92133 11.2197 5.78066C11.079 5.64 11 5.44923 11 5.2503C11 5.05138 11.079 4.8606 11.2197 4.71994C11.3603 4.57928 11.5511 4.50026 11.75 4.50026H13.477C12.7931 3.43009 11.8107 2.58372 10.6512 2.06569C9.4917 1.54766 8.20584 1.38067 6.95248 1.58534C5.69912 1.79001 4.53316 2.35737 3.59864 3.21735C2.66412 4.07733 2.00198 5.19225 1.694 6.42437C1.67128 6.52116 1.62955 6.61247 1.57123 6.69298C1.51291 6.7735 1.43917 6.84161 1.35429 6.89337C1.26942 6.94513 1.1751 6.97949 1.07682 6.99447C0.97854 7.00944 0.878265 7.00473 0.781825 6.9806C0.685385 6.95647 0.594703 6.91341 0.515053 6.85392C0.435404 6.79443 0.368375 6.7197 0.317865 6.63407C0.267355 6.54844 0.234371 6.45362 0.220832 6.35513C0.207293 6.25664 0.213469 6.15644 0.239 6.06035C0.643544 4.44268 1.5434 2.99184 2.81279 1.91064C4.08218 0.829441 5.65766 0.171917 7.319 0.0299774L7.32 0.0289774ZM3.92 14.8819C4.99199 15.5173 6.19758 15.8935 7.44068 15.9805C8.68378 16.0675 9.93001 15.8628 11.08 15.3829C12.23 14.9029 13.252 14.1609 14.0646 13.2161C14.8771 12.2712 15.4577 11.1496 15.76 9.94059C15.805 9.74878 15.7728 9.54695 15.6702 9.37872C15.5676 9.2105 15.403 9.08939 15.2119 9.04158C15.0207 8.99376 14.8185 9.02307 14.6488 9.12318C14.4791 9.22329 14.3556 9.38615 14.305 9.57657C13.9969 10.8084 13.3347 11.9231 12.4002 12.7828C11.4658 13.6426 10.3 14.2098 9.04688 14.4145C7.79373 14.6191 6.50809 14.4522 5.34871 13.9344C4.18933 13.4166 3.20699 12.5705 2.523 11.5007H4.25C4.44891 11.5007 4.63968 11.4217 4.78033 11.281C4.92098 11.1403 5 10.9496 5 10.7506C5 10.5517 4.92098 10.3609 4.78033 10.2203C4.63968 10.0796 4.44891 10.0006 4.25 10.0006H0V14.2509C0 14.4498 0.0790176 14.6406 0.21967 14.7812C0.360322 14.9219 0.551088 15.0009 0.75 15.0009C0.948912 15.0009 1.13968 14.9219 1.28033 14.7812C1.42098 14.6406 1.5 14.4498 1.5 14.2509V12.6648C2.14478 13.5631 2.96879 14.3181 3.92 14.8819Z" fill="white"/></svg></button>
+          <button class="action-btn"><span class="action-tooltip">Mehr Aktionen</span><svg width="17" height="4" viewBox="0 0 17 4" fill="none"><path d="M1 2C1 2.26522 1.09877 2.51957 1.27459 2.70711C1.4504 2.89464 1.68886 3 1.9375 3C2.18614 3 2.4246 2.89464 2.60041 2.70711C2.77623 2.51957 2.875 2.26522 2.875 2C2.875 1.73478 2.77623 1.48043 2.60041 1.29289C2.4246 1.10536 2.18614 1 1.9375 1C1.68886 1 1.4504 1.10536 1.27459 1.29289C1.09877 1.48043 1 1.73478 1 2ZM7.5625 2C7.5625 2.26522 7.66127 2.51957 7.83709 2.70711C8.0129 2.89464 8.25136 3 8.5 3C8.74864 3 8.9871 2.89464 9.16291 2.70711C9.33873 2.51957 9.4375 2.26522 9.4375 2C9.4375 1.73478 9.33873 1.48043 9.16291 1.29289C8.9871 1.10536 8.74864 1 8.5 1C8.25136 1 8.0129 1.10536 7.83709 1.29289C7.66127 1.48043 7.5625 1.73478 7.5625 2ZM14.125 2C14.125 2.26522 14.2238 2.51957 14.3996 2.70711C14.5754 2.89464 14.8139 3 15.0625 3C15.3111 3 15.5496 2.89464 15.7254 2.70711C15.9012 2.51957 16 2.26522 16 2C16 1.73478 15.9012 1.48043 15.7254 1.29289C15.5496 1.10536 15.3111 1 15.0625 1C14.8139 1 14.5754 1.10536 14.3996 1.29289C14.2238 1.48043 14.125 1.73478 14.125 2Z" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        `;
+        row.appendChild(bar);
+        setTimeout(() => {
+          bar.querySelectorAll('.action-btn').forEach((btn, i) => {
+            setTimeout(() => btn.classList.add('visible'), i * 60);
+          });
+        }, 80);
+
+        // Advance turn index
+        turnIndex++;
+        msgs.scrollTop = msgs.scrollHeight;
+
+        // Show followup chip if there is one
+        if (turn.followupText) {
+          const followupEl = document.getElementById('chat-followup');
+          followupEl.textContent = turn.followupText;
+          followupEl.dataset.ready = 'true';
+        }
+
+        // After last turn: show end research button
+        if (turnIndex >= TOTAL_TURNS) {
+          showEndResearchButton();
+        }
+      }
+    }
+
+    setTimeout(next, 350);
+  }
+
+  function showEndResearchButton() {
+    const msgs = document.getElementById('chat-messages');
+    const row = document.createElement('div');
+    row.className = 'end-research-row';
+    row.style.animationDelay = '0.35s';
+    row.innerHTML = '<button class="end-research-btn" onclick="openEndModal()">Recherche beenden</button>';
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // ── Modal logic ─────────────────────────────────────────────────────────────
+  function openEndModal() {
+    const overlay = document.getElementById('modal-overlay');
+    // Reset to prompt state
+    document.getElementById('modal-prompt').classList.remove('hidden');
+    document.getElementById('modal-confirmed').classList.remove('active');
+    overlay.style.display = 'flex';
+    // Trigger transition on next frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        overlay.classList.add('active');
+      });
+    });
+  }
+
+  function closeEndModal() {
+    const overlay = document.getElementById('modal-overlay');
+    overlay.classList.remove('active');
+    setTimeout(() => { overlay.style.display = 'none'; }, 250);
+  }
+
+  function confirmEndResearch() {
+    document.getElementById('modal-prompt').classList.add('hidden');
+    document.getElementById('modal-confirmed').classList.add('active');
+  }
+
+  // Close modal on overlay click (only in prompt state)
+  document.getElementById('modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+      const confirmed = document.getElementById('modal-confirmed');
+      if (!confirmed.classList.contains('active')) {
+        closeEndModal();
+      }
+    }
+  });
+
+  function useChatFollowup() {
+    const followupEl = document.getElementById('chat-followup');
+    const text = followupEl.textContent.trim();
+    followupEl.dataset.ready = 'false';
+    hideChatFollowup();
+    const ta = document.getElementById('chat-textarea');
+    ta.value = '';
+    ta.focus();
+    let i = 0;
+    setSendBtn('chat-send-btn', 'chat-send-icon', 'typing');
+    function type() {
+      if (i < text.length) {
+        ta.value += text[i++];
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+        setTimeout(type, 40);
+      } else {
+        setSendBtn('chat-send-btn', 'chat-send-icon', 'ready');
+      }
+    }
+    type();
+  }
+
+  function hideChatFollowup() {
+    const followupEl = document.getElementById('chat-followup');
+    followupEl.classList.remove('visible');
+    followupEl.dataset.ready = 'false';
+  }
+
+  document.getElementById('chat-textarea').addEventListener('focus', () => {
+    const followupEl = document.getElementById('chat-followup');
+    if (followupEl.dataset.ready === 'true') followupEl.classList.add('visible');
+  });
+  document.getElementById('chat-textarea').addEventListener('blur', () => {
+    setTimeout(() => {
+      const followupEl = document.getElementById('chat-followup');
+      if (document.activeElement !== followupEl) followupEl.classList.remove('visible');
+    }, 150);
+  });
+
+  function md(text) {
+    return text.split('\n').map(line => {
+      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      if (line.trim() === '---') return `<hr style="border:none;border-top:1px solid #3a3a3a;margin:16px 0;">`;
+      if (line.trim() === '') return `<div style="height:8px;"></div>`;
+      if (line.startsWith('• ') || line.startsWith('* ')) {
+        const txt = line.startsWith('• ') ? line.slice(2) : line.slice(2);
+        return `<p style="margin-left:20px;margin-bottom:6px;display:flex;gap:10px;"><span style="flex-shrink:0;">•</span><span>${txt}</span></p>`;
+      }
+      return `<p style="margin-bottom:6px;">${line}</p>`;
+    }).join('');
+  }
+
+  function esc(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function initTooltips() {
+    const globalTip = document.getElementById('global-tooltip');
+    const sidebar = document.querySelector('.sidebar');
+    const logo = document.querySelector('.logo');
+    const logoChatgpt = document.querySelector('.logo-chatgpt');
+    const logoSidebar = document.querySelector('.logo-sidebar');
+
+    logo.addEventListener('mouseenter', () => {
+      if (!sidebar.classList.contains('collapsed')) return;
+      logoChatgpt.style.display = 'none';
+      logoSidebar.style.display = 'block';
+      const rect = logo.getBoundingClientRect();
+      globalTip.textContent = 'Seitenleiste öffnen';
+      globalTip.style.display = 'block';
+      globalTip.style.left = (rect.right + 17) + 'px';
+      globalTip.style.top = (rect.top + rect.height / 2 - globalTip.offsetHeight / 2) + 'px';
+    });
+    logo.addEventListener('mouseleave', () => {
+      logoChatgpt.style.display = 'block';
+      logoSidebar.style.display = 'none';
+      globalTip.style.display = 'none';
+    });
+
+    document.querySelectorAll('[data-tooltip]').forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        const rect = btn.getBoundingClientRect();
+        const isNavOrBottom = btn.classList.contains('nav-item') || btn.classList.contains('collapsed-btn');
+        const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+
+        globalTip.textContent = btn.dataset.tooltip;
+        globalTip.style.display = 'block';
+
+        if (isNavOrBottom && isCollapsed) {
+          globalTip.style.left = (rect.right + 17) + 'px';
+          globalTip.style.top = (rect.top + rect.height / 2 - globalTip.offsetHeight / 2) + 'px';
+        } else if (!isNavOrBottom) {
+          const tw = globalTip.offsetWidth;
+          globalTip.style.left = (rect.left + rect.width / 2 - tw / 2) + 'px';
+          globalTip.style.top = (rect.bottom + 8) + 'px';
+        } else {
+          globalTip.style.display = 'none';
+        }
+      });
+      btn.addEventListener('mouseleave', () => { globalTip.style.display = 'none'; });
+    });
+  }
+
+  // Control hover state manually to avoid stuck :hover after view switch
+  ['home-send-btn', 'chat-send-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('mouseenter', () => { if (btn.classList.contains('voice')) btn.classList.add('hovered'); });
+    btn.addEventListener('mouseleave', () => btn.classList.remove('hovered'));
+  });
+
+  document.addEventListener('DOMContentLoaded', initTooltips);
+</script>
+</body>
+</html>
